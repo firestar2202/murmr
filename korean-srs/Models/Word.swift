@@ -11,8 +11,9 @@ import SwiftData
 @Model
 final class Word {
     var id: UUID
-    var frontText: String // Korean
-    var backText: String // English
+    var frontText: String
+    var backText: String // English translation
+    var language: String = "ko" // Language code for frontText (e.g., "ko", "ja", "zh") - defaults to Korean for backward compatibility
     var dateCreated: Date
     var nextReviewDate: Date
     var easeFactor: Double // SM-2 ease factor (starts at 2.5)
@@ -23,6 +24,7 @@ final class Word {
         id: UUID = UUID(),
         frontText: String,
         backText: String,
+        language: String = "ko", // Default to Korean for backward compatibility
         dateCreated: Date = Date(),
         nextReviewDate: Date = Date(),
         easeFactor: Double = 2.5,
@@ -32,6 +34,7 @@ final class Word {
         self.id = id
         self.frontText = frontText
         self.backText = backText
+        self.language = language
         self.dateCreated = dateCreated
         self.nextReviewDate = nextReviewDate
         self.easeFactor = easeFactor

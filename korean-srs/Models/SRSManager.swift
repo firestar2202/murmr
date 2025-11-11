@@ -61,6 +61,7 @@ struct SRSManager {
         let tempWord = Word(
             frontText: word.frontText,
             backText: word.backText,
+            language: word.language,
             dateCreated: word.dateCreated,
             nextReviewDate: word.nextReviewDate,
             easeFactor: word.easeFactor,

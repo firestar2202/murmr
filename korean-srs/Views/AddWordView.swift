@@ -11,8 +11,9 @@ import SwiftData
 struct AddWordView: View {
     @Environment(\.modelContext) private var modelContext
     @StateObject private var speechRecognizer = SpeechRecognizer()
-    @State private var koreanText = ""
+    @State private var frontText = ""
     @State private var englishText = ""
+    @State private var selectedLanguage: SupportedLanguage = .korean
     @State private var translationOptions: [TranslationOption] = []
     @State private var isLoadingTranslations = false
     @State private var errorMessage: String?
@@ -22,9 +23,22 @@ struct AddWordView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section("Korean Word") {
+                Section("Language") {
+                    Picker("Language", selection: $selectedLanguage) {
+                        ForEach(SupportedLanguage.allCases, id: \.self) { language in
+                            HStack {
+                                Text(language.info.name)
+                                Text("(\(language.info.nativeName))")
+                                    .foregroundColor(.secondary)
+                            }
+                            .tag(language)
+                        }
+                    }
+                }
+                
+                Section("Word") {
                     HStack {
-                        TextField("Enter Korean word", text: $koreanText)
+                        TextField("Enter word", text: $frontText)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                         
@@ -82,7 +96,7 @@ struct AddWordView: View {
                             Spacer()
                         }
                     }
-                    .disabled(koreanText.isEmpty || englishText.isEmpty)
+                    .disabled(frontText.isEmpty || englishText.isEmpty)
                 }
                 
                 if let errorMessage = errorMessage {
@@ -95,13 +109,24 @@ struct AddWordView: View {
             }
             .navigationTitle("Add Words")
             .onChange(of: speechRecognizer.transcribedText) { _, newValue in
-                koreanText = newValue
+                frontText = newValue
             }
-            .onChange(of: koreanText) { _, newValue in
+            .onChange(of: frontText) { _, newValue in
+                // Auto-detect language when text changes
                 if !newValue.isEmpty {
-                    fetchTranslations(for: newValue)
+                    if let detectedCode = LanguageDetector.detectLanguage(from: newValue),
+                       let detectedLanguage = SupportedLanguage.from(code: detectedCode) {
+                        selectedLanguage = detectedLanguage
+                    }
+                    fetchTranslations(for: newValue, language: selectedLanguage.rawValue)
                 } else {
                     translationOptions = []
+                }
+            }
+            .onChange(of: selectedLanguage) { _, _ in
+                // Re-fetch translations when language changes
+                if !frontText.isEmpty {
+                    fetchTranslations(for: frontText, language: selectedLanguage.rawValue)
                 }
             }
             .task {
@@ -110,7 +135,7 @@ struct AddWordView: View {
         }
     }
     
-    private func fetchTranslations(for text: String) {
+    private func fetchTranslations(for text: String, language: String) {
         guard !text.isEmpty else { return }
         
         isLoadingTranslations = true
@@ -118,7 +143,7 @@ struct AddWordView: View {
         
         Task {
             do {
-                let options = try await translationService.fetchTranslations(for: text)
+                let options = try await translationService.fetchTranslations(for: text, from: language)
                 await MainActor.run {
                     translationOptions = options
                     isLoadingTranslations = false
@@ -133,17 +158,18 @@ struct AddWordView: View {
     }
     
     private func addWord() {
-        guard !koreanText.isEmpty && !englishText.isEmpty else { return }
+        guard !frontText.isEmpty && !englishText.isEmpty else { return }
         
         let word = Word(
-            frontText: koreanText.trimmingCharacters(in: .whitespacesAndNewlines),
-            backText: englishText.trimmingCharacters(in: .whitespacesAndNewlines)
+            frontText: frontText.trimmingCharacters(in: .whitespacesAndNewlines),
+            backText: englishText.trimmingCharacters(in: .whitespacesAndNewlines),
+            language: selectedLanguage.rawValue
         )
         
         modelContext.insert(word)
         
         // Reset fields
-        koreanText = ""
+        frontText = ""
         englishText = ""
         translationOptions = []
         errorMessage = nil

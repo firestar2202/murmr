@@ -14,18 +14,32 @@ struct WordsView: View {
     
     @State private var searchText = ""
     @State private var sortOption: SortOption = .dateAdded
+    @State private var selectedLanguage: String? = nil // nil means "All Languages"
+    
+    private var availableLanguages: [String] {
+        let languages = Set(words.map { $0.language }.filter { !$0.isEmpty })
+        return Array(languages).sorted()
+    }
     
     private var filteredWords: [Word] {
-        let filtered: [Word]
-        if searchText.isEmpty {
-            filtered = words
+        var filtered: [Word]
+        
+        // Filter by language if one is selected
+        if let selectedLanguage = selectedLanguage {
+            filtered = words.filter { $0.language == selectedLanguage }
         } else {
-            filtered = words.filter { word in
+            filtered = words
+        }
+        
+        // Filter by search text
+        if !searchText.isEmpty {
+            filtered = filtered.filter { word in
                 word.frontText.localizedCaseInsensitiveContains(searchText) ||
                 word.backText.localizedCaseInsensitiveContains(searchText)
             }
         }
         
+        // Sort
         switch sortOption {
         case .dateAdded:
             return filtered.sorted { $0.dateCreated > $1.dateCreated }
@@ -43,6 +57,20 @@ struct WordsView: View {
                     emptyState
                 } else {
                     List {
+                        // Language filter dropdown
+                        if !availableLanguages.isEmpty {
+                            Section("Filter by Language") {
+                                Picker("Language", selection: $selectedLanguage) {
+                                    Text("All Languages").tag(nil as String?)
+                                    ForEach(availableLanguages, id: \.self) { languageCode in
+                                        Text(LanguageDetector.getLanguageName(for: languageCode))
+                                            .tag(languageCode as String?)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Words list
                         ForEach(filteredWords) { word in
                             wordRow(word)
                         }
