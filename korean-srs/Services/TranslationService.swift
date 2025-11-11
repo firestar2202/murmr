@@ -25,8 +25,7 @@ class TranslationService {
         }
         
         // URL encode the text
-        guard let encodedText = koreanText.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: "\(baseURL)?q=\(encodedText)&langpair=ko|en") else {
+        guard let url = URL(string: "\(baseURL)?q=\(koreanText)&langpair=ko|en") else {
             throw TranslationError.invalidURL
         }
         

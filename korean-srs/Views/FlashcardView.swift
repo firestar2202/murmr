@@ -27,6 +27,10 @@ struct FlashcardView: View {
                 .padding()
                 .frame(width: 300, height: 400)
                 .opacity(flipped ? (rotation > 90 ? 1 : 0) : (rotation < 90 ? 1 : 0))
+                .rotation3DEffect(
+                    .degrees(flipped ? -rotation : 0),
+                    axis: (x: 0, y: 1, z: 0)
+                )
         }
         .rotation3DEffect(
             .degrees(rotation),
